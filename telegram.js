@@ -27,6 +27,21 @@ const COMMAND_MAP = {
   "3": "gasReserve"
 };
 
+export async function sendMessageWithButtons(text, inlineKeyboard) {
+  return postTelegram("sendMessage", {
+    text: String(text).slice(0, 4096),
+    reply_markup: { inline_keyboard: inlineKeyboard },
+  });
+}
+
+export async function editMessageWithButtons(text, messageId, inlineKeyboard) {
+  if (!TOKEN || !chatId || !messageId) return null;
+  return postTelegram("editMessageText", {
+    message_id: messageId,
+    text: String(text).slice(0, 4096),
+    reply_markup: { inline_keyboard: inlineKeyboard },
+  });
+}
 // ─── CONFIG HELPERS ───────────────────────────────────────────────
 
 async function updateConfig(key, value) {
