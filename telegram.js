@@ -122,8 +122,6 @@ export async function sendMessage(text) {
 export async function sendHTML(html) {
   return postTelegram("sendMessage", { text: html.slice(0, 4096), parse_mode: "HTML" });
 }
-
-<<<<<<< HEAD
 export async function editMessage(text, messageId) {
   if (!TOKEN || !chatId || !messageId) return null;
   return postTelegram("editMessageText", {
@@ -131,9 +129,8 @@ export async function editMessage(text, messageId) {
     text: String(text).slice(0, 4096),
   });
 }
-=======
+
 // ─── POLLING & COMMAND HANDLER ────────────────────────────────────
->>>>>>> ba918f74465c00c1b7753d64a0e637d09c127541
 
 async function poll(onMessage) {
   while (_polling) {
