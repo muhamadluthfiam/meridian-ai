@@ -2,6 +2,8 @@
 
 **Autonomous Meteora DLMM liquidity management agent for Solana, powered by LLMs.**
 
+**Links:** [Website](https://agentmeridian.xyz) | [Telegram](https://t.me/agentmeridian) | [X](https://x.com/meridian_agent)
+
 Meridian runs continuous screening and management cycles, deploying capital into high-quality Meteora DLMM pools and closing positions based on live PnL, yield, and range data. It learns from every position it closes.
 
 ---
@@ -25,6 +27,12 @@ Meridian runs a **ReAct agent loop** — each cycle the LLM reasons over live da
 |---|---|---|
 | **Screening Agent** | Every 30 min | Pool screening — finds and deploys into the best candidate |
 | **Management Agent** | Every 10 min | Position management — evaluates each open position and acts |
+
+### Agent harness
+
+Meridian's agent harness is the runtime wrapper around every autonomous cycle. It gives both **main** and **experimental** agents the same control loop: load live state, inject relevant memory, expose only role-appropriate tools, execute tool calls, and return a readable cycle report.
+
+The harness also keeps a structured decision log in `decision-log.json` for deployments, closes, skips, and no-deploy outcomes. Each entry records the actor, pool or position, summary, reason, key risks, metrics, and rejected alternatives. Recent decisions are injected back into the system prompt and are available through `get_recent_decisions`, so the agent can answer "why did you deploy?", "why did you close?", or "why did you skip?" without guessing after the fact.
 
 **Data sources:**
 - `@meteora-ag/dlmm` SDK — on-chain position data, active bin, deploy/close transactions
@@ -433,7 +441,6 @@ All fields are optional — defaults shown. Edit `user-config.json`.
 | `screeningModel` | `openai/gpt-oss-20b:free` | LLM for screening cycles |
 | `generalModel` | `openai/gpt-oss-20b:free` | LLM for REPL / chat |
 
-<<<<<<< HEAD
 > Override model at runtime: `node cli.js config set screeningModel anthropic/claude-opus-4-5`
 
 ---
@@ -494,23 +501,43 @@ This analyzes closed position performance (win rate, avg PnL, fee yields) and au
 
 ## HiveMind
 
-HiveMind sync uses Agent Meridian by default. Shared lessons, presets, and performance summaries are routed through the configured Agent Meridian API.
+HiveMind sync uses Agent Meridian at `https://api.agentmeridian.xyz` by default with the built-in public key. Agents can register, pull shared lessons/presets, and push learning events without a separate registration flow.
 
-**What you get:** shared lessons, strategy presets, and crowd performance context from other Meridian agents.
+**What you get:**
+- Shared lessons from other Meridian agents
+- Strategy presets and crowd performance context
+- Role-aware lessons injected into future screener/manager prompts when `hiveMindPullMode` is `auto`
 
-**What you share:** lessons and closed-position performance. Wallet private keys and balances are never sent.
+**What you share:**
+- Lessons from `lessons.json`
+- Closed-position performance events: pool, pool name, base mint, strategy, close reason, PnL, fees, and hold time
+- Agent heartbeat metadata: agent ID, version, timestamp, and basic capability flags
+- **Private keys and wallet balances are never sent**
+
+HiveMind failures are non-blocking. If Agent Meridian is unavailable, the agent logs a warning and keeps running.
 
 ### Setup
 
-No manual HiveMind registration is required for the shared Agent Meridian setup. `hiveMindUrl`, `hiveMindApiKey`, and `publicApiKey` have built-in Agent Meridian defaults.
+No manual HiveMind registration command is required for the shared Agent Meridian setup. `agentId` is generated automatically on startup if it is missing.
+
+To use a private HiveMind API key, check the Telegram announcement channel and set it as `hiveMindApiKey`.
+
+Relevant config fields:
+
+```json
+{
+  "agentId": "",
+  "hiveMindUrl": "",
+  "hiveMindApiKey": "",
+  "hiveMindPullMode": "auto"
+}
+```
+
+Blank `hiveMindUrl` and `hiveMindApiKey` values intentionally fall back to the Agent Meridian defaults. Set `hiveMindPullMode` to `manual` if you do not want shared lessons and presets pulled automatically.
 
 ### Disable
 
-HiveMind disable behavior needs an explicit config flag before empty strings can be used as a disable mechanism. Empty strings currently fall back to Agent Meridian defaults.
-
-### Self-hosting
-
-See [meridian-hive](https://github.com/fciaf420/meridian-hive) for the server source.
+There is currently no empty-string disable path for HiveMind; blank values fall back to the built-in Agent Meridian defaults. A true off switch should be implemented as an explicit config flag before documenting HiveMind as disabled by clearing fields.
 
 ---
 
@@ -534,6 +561,7 @@ agent.js            ReAct loop: LLM → tool call → repeat
 config.js           Runtime config from user-config.json + .env
 prompt.js           System prompt builder (SCREENER / MANAGER / GENERAL roles)
 state.js            Position registry (state.json)
+decision-log.js     Structured decision log for deploy, close, skip, and no-deploy rationale
 lessons.js          Learning engine: records performance, derives lessons, evolves thresholds
 pool-memory.js      Per-pool deploy history + snapshots
 strategy-library.js Saved LP strategies
