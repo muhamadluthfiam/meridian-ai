@@ -151,7 +151,7 @@ export async function editMessageWithButtons(text, messageId, inlineKeyboard) {
   });
 }
 
-async function editMessage(text, messageId) {
+export async function editMessage(text, messageId) {
   if (!TOKEN || !chatId || !messageId) return null;
   return postTelegram("editMessageText", {
     message_id: messageId,
